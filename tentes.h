@@ -15,5 +15,9 @@
 int **creation_plateau(int x, int y);
 void free_plateau(int **Plateau, int x);
 void afficher_plateau(int **Plateau, int *nbArbreLignes, int *nbArbreColonnes, int x, int y);
-void ajouter_vide(int **Plateau, int x, int y);
+void ajouter_vide(int **Plateau);
+int **remplir_autour(int **Plateau, int x, int y);
+bool peut_placer_tente(int **Plateau, int x, int y, int *nbTentesLignes, int *nbTentesColonnes);
+bool backtrack(int **Plateau, int *nbTentesLignes, int *nbTentesColonnes, int x, int y);
+int **resolution(int **Plateau, int *nbArbreLignes, int *nbArbreColonnes);
 int main(void);
