@@ -1,7 +1,7 @@
 #include "lecture_plan.h"
 
 //Fonction pour lire une map du jeu de tentes
-int lire_fichier(const char *nom_fichier, int *lignes, int *colonnes, int **Plateau, int ID_ARBRE) {
+int lire_fichier(const char *nom_fichier, int *nbArbreLignes, int *nbArbreColonnes, int **Plateau, int ID_ARBRE) {
     FILE *fichier = fopen(nom_fichier, "r");
     if (fichier == NULL) {
         printf("Erreur : impossible d'ouvrir le fichier.\n");
@@ -37,14 +37,14 @@ int lire_fichier(const char *nom_fichier, int *lignes, int *colonnes, int **Plat
             char *token = strtok(buffer, ";");
             int i = 0;
             while (token) {
-                lignes[i++] = atoi(token);
+                nbArbreLignes[i++] = atoi(token);
                 token = strtok(NULL, ";");
             }
         } else if (lire_colonnes) {
             char *token = strtok(buffer, ";");
             int i = 0;
             while (token) {
-                colonnes[i++] = atoi(token);
+                nbArbreColonnes[i++] = atoi(token);
                 token = strtok(NULL, ";");
             }
         } else if (lire_arbres) {

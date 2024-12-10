@@ -6,6 +6,6 @@
 #include <stdio.h>
 #include <string.h>
 
-int lire_fichier(const char *nom_fichier, int *lignes, int *colonnes, int **Plateau, int ID_ARBRE);
+int lire_fichier(const char *nom_fichier, int *nbArbreLignes, int *nbArbreColonnes, int **Plateau, int ID_ARBRE);
 
 #endif
