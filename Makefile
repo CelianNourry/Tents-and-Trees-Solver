@@ -1,9 +1,9 @@
 TARGET = Jeu_de_Tentes
 
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c11
+CFLAGS = -Wall -Wextra
 
-SRCS = tentes.c lecture_plan.c
+SRCS = tentes.c
 OBJS = $(SRCS:.c=.o)
 
 all: $(TARGET)
