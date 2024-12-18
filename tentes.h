@@ -9,8 +9,8 @@
 #define TENTE 1
 #define ARBRE 2 
 
-#define LIGNES 8
-#define COLONNES 8
+#define LIGNES 20
+#define COLONNES 20
 
 typedef struct {
     int **grille;

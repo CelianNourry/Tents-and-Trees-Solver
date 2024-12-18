@@ -1,6 +1,6 @@
 #include "tentes.h"
 
-//Fonction qui clear le terminal
+/* Fonction qui clear le terminal */
 void clear_terminal() {
     #ifdef _WIN32
         system("cls"); // Pour Windows
@@ -36,7 +36,7 @@ int lire_fichier(const char *nom_fichier, Plateau *Plateau) {
             continue;
         }
 
-        if (strncmp(buffer, "arbres:", 7) == 0) {
+        if (strncmp(buffer, "arbres", 6) == 0) {
             lire_arbres = true;
             lire_lignes = lire_colonnes = false;
             continue;
@@ -318,6 +318,29 @@ int resolution (Plateau *p){
                 }
             }
         }
+        
+        // S'il y a seulement un espace vide autour d'un ARBRE, on y place une TENTE
+        for (int i = 0; i < LIGNES; i++){
+            for (int j = 0; j < COLONNES; j++){
+                if (p -> grille[i][j] == ARBRE){
+                    int espaces_vides = 0;
+                    int direction_i = -1, direction_j = -1;
+
+                    if (i > 0 && p -> grille[i - 1][j] == VIDE) { espaces_vides++; direction_i = i - 1; direction_j = j;}
+                    if (i < LIGNES - 1 && p -> grille[i + 1][j] == VIDE) { espaces_vides++; direction_i = i + 1; direction_j = j;}
+                    if (j > 0 && p -> grille[i][j - 1] == VIDE) { espaces_vides++; direction_i = i; direction_j = j - 1;}
+                    if (j < COLONNES - 1 && p -> grille[i][j + 1] == VIDE) { espaces_vides++; direction_i = i; direction_j = j + 1;}
+                    
+                    if (espaces_vides == 1) {
+                        if (peut_placer_tente(p, direction_i, direction_j)) {
+                            placer_tente(p, direction_i, direction_j);
+                            modifications = 1;
+                        }
+                    }
+                }
+            }
+        }
+        
     }
 
     return 1;
@@ -344,15 +367,17 @@ int backtrack(Plateau *p) {
 
                 // Annuler le placement si ça ne mène pas à une solution
                 enlever_tente(p, i, j);
+
             }
         }
     }
-    return 0; // Aucune solution trouvée
+
+    return 0;
 }
 
 int backtrack_brut(Plateau *p) {
     if (verif_solution(p)) {
-        return 1; // Solution trouvée
+        return 1;
     }
 
     // Parcourir toutes les cases du plateau
@@ -373,6 +398,7 @@ int backtrack_brut(Plateau *p) {
             }
         }
     }
+
     return 0;
 }
 
@@ -549,7 +575,7 @@ int main(void) {
     int choix;
 
     // Lecture du fichier pour récupérer les informations du Plateau
-    if (!lire_fichier("facile0.pln", p)) {
+    if (!lire_fichier("difficile0.pln", p)) {
         free_plateau(p);
         return 1;
     }
@@ -601,7 +627,7 @@ int main(void) {
             return 0;
         
         case 5:
-            printf("Vous avez quitté le programme.\n\n");
+            printf("Vous avez quitté le programme.\n");
             free_plateau(p);
             return 0;
 
@@ -609,6 +635,7 @@ int main(void) {
             printf("Choix invalide. Veuillez entrer 1, 2, 3, 4 ou 5.\n\n");
             break;
     }
+    
     free_plateau(p);
     return 0;
 }
