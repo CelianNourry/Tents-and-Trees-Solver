@@ -9,7 +9,19 @@ void clear_terminal() {
     #endif
 }
 
-//Fonction pour lire une map du jeu de tentes
+/*
+    Lit un fichier pour en extraire les infromations nécessaires d'un jeu de Tentes.
+    Format d'un fichier vailde :
+        - doit commencer par "debutPlan"
+        - si "lignes" est lu :
+            lit les tentes nécéssaires sur chaque ligne du jeu. Le séparateur pour chaque nouvelle ligne est ";"
+        - si "colonnes" est lu :
+            lit les tentes nécéssaires sur chaque colonne du jeu. Le séparateur pour chaque nouvelle colonne est ";"
+        - si "arbres" est lu :
+            lit les coordonées (x, y) de chaque arbre. Le séparateur entre chaque coordonéee x et y est ";"
+        - doit terminer par "finPlan"
+
+*/
 int lire_fichier(const char *nom_fichier, Plateau *Plateau) {
     FILE *fichier = fopen(nom_fichier, "r");
     if (fichier == NULL) {
@@ -58,7 +70,6 @@ int lire_fichier(const char *nom_fichier, Plateau *Plateau) {
             while (token) {
                 Plateau -> tentesParColonne[i] = atoi(token);
                 Plateau -> tentesParColonneOriginal[i] = Plateau -> tentesParColonne[i];
-                //printf("colonne %d : %d\n", i, atoi(token));
                 i++;
                 token = strtok(NULL, ";");
             }
@@ -79,7 +90,7 @@ int lire_fichier(const char *nom_fichier, Plateau *Plateau) {
     return 1;
 }
 
-/* Alloue de l'espace pour les cases du Plateau. Les cases sont initialisées avec de l'Herbe */
+/* Alloue de l'espace pour les cases du Plateau. Les cases sont initialisées avec du VIDE */
 Plateau *creation_plateau(void) {
     Plateau *p = malloc(sizeof(Plateau));
     if (p == NULL) return NULL;
@@ -119,8 +130,8 @@ Plateau *creation_plateau(void) {
         return NULL;
     }
 
-    // Initialisation du Plateau avec de l'Herbe sur chaque case
-    for (int i = 0; i < LIGNES; i++) for (int j = 0; j < COLONNES; j++) p -> grille[i][j] = HERBE;
+    // Initialisation du Plateau avec du VIDE sur chaque case
+    for (int i = 0; i < LIGNES; i++) for (int j = 0; j < COLONNES; j++) p -> grille[i][j] = VIDE;
 
     return p;
 }
@@ -139,6 +150,51 @@ void free_plateau(Plateau *p) {
     free(p);
 }
 
+/* Retourne un Plateau qui est la copie de celui mit en argument */
+Plateau *copie_plateau(const Plateau *p) {
+    if (p == NULL) return NULL;
+
+    Plateau *copie = creation_plateau();
+    if (copie == NULL) return NULL;
+
+    for (int i = 0; i < LIGNES; i++) {
+        for (int j = 0; j < COLONNES; j++) {
+            copie -> grille[i][j] = p -> grille[i][j];
+        }
+    }
+
+    for (int i = 0; i < LIGNES; i++) {
+        copie -> tentesParLigne[i] = p -> tentesParLigne[i];
+        copie -> tentesParLigneOriginal[i] = p -> tentesParLigneOriginal[i];
+    }
+
+    for (int j = 0; j < COLONNES; j++) {
+        copie -> tentesParColonne[j] = p -> tentesParColonne[j];
+        copie -> tentesParColonneOriginal[j] = p -> tentesParColonneOriginal[j];
+    }
+
+    return copie;
+}
+
+/* Remplace les informations du Plateau destination par celles du Plateau source */
+void restaurer_plateau(Plateau *dest, const Plateau *src) {
+    for (int i = 0; i < LIGNES; i++) {
+        for (int j = 0; j < COLONNES; j++) {
+            dest -> grille[i][j] = src -> grille[i][j];
+        }
+    }
+
+    for (int i = 0; i < LIGNES; i++) {
+        dest -> tentesParLigne[i] = src->tentesParLigne[i];
+        dest -> tentesParLigneOriginal[i] = src -> tentesParLigneOriginal[i];
+    }
+
+    for (int j = 0; j < COLONNES; j++) {
+        dest -> tentesParColonne[j] = src -> tentesParColonne[j];
+        dest -> tentesParColonneOriginal[j] = src -> tentesParColonneOriginal[j];
+    }
+}
+
 /* Affiche le Plateau */
 void afficher_plateau(Plateau *p) {
     if (p == NULL) {
@@ -146,12 +202,12 @@ void afficher_plateau(Plateau *p) {
         return;
     }
     printf("  ");
-    for (int i = 0; i < LIGNES; i++) printf(" %d", p -> tentesParLigne[i]);
+    for (int i = 0; i < LIGNES; i++) printf(" %d", p -> tentesParLigneOriginal[i]);
     printf("\n  ");
     for (int i = 0; i < LIGNES; i++) printf(" _");
     printf("\n");
     for (int i = 0; i < LIGNES; i++) {
-        printf("%d ", p -> tentesParColonne[i]);
+        printf("%d ", p -> tentesParColonneOriginal[i]);
         printf("|");
         for (int j = 0; j < COLONNES; j++) {
             if (p  ->  grille[i][j] == VIDE) printf(" ");
@@ -167,40 +223,24 @@ void afficher_plateau(Plateau *p) {
     printf("\n");
 }
 
-/* Remplacer les cases d'HERBES autour des ARBRES par du VIDE */
-void remplir_vide_autour_arbre(Plateau *p){
-    for (int i = 0; i < LIGNES; i++) {
-        for (int j = 0; j < COLONNES; j++) {
-            if (p -> grille[i][j] == ARBRE) {
-                if (i > 0 && p -> grille[i - 1][j] == HERBE) p -> grille[i - 1][j] = VIDE;
-                if (i < LIGNES - 1 && p -> grille[i + 1][j] == HERBE) p -> grille[i + 1][j] = VIDE;
-                if (j > 0 && p -> grille[i][j - 1] == HERBE) p -> grille[i][j - 1] = VIDE;
-                if (j < COLONNES - 1 && p -> grille[i][j + 1] == HERBE) p -> grille[i][j + 1] = VIDE;
-            }
-        }
-    }
-}
+/*
+    Vérifie si une TENTE peut être placée sur la case (i, j) du Plateau
+    La case (i, j) doit :
+        - être VIDE
+        - avoir encore de la place pour une nouvelle TENTE
+        - ne pas avoir de case adjacente étant une TENTE 
+        - avoir une case adjacente étant un ARBRE
 
-/* Renvoie 1 si une tente est adjacente au point, sinon 0 */
-int peut_enlever_herbe(Plateau *p, int i, int j){
-    if (i > 0 && j > 0 && p -> grille[i - 1][j - 1] == TENTE) return 0;
-    if (i > 0 && p -> grille[i - 1][j] == TENTE) return 0;
-    if (i > 0 && j < COLONNES - 1 && p -> grille[i - 1][j + 1] == TENTE) return 0;
-    if (j > 0 && p -> grille[i][j - 1] == TENTE) return 0;
-    if (j < COLONNES - 1 && p -> grille[i][j + 1] == TENTE) return 0;
-    if (i < LIGNES - 1 && j > 0 && p->grille[i + 1][j - 1] == TENTE) return 0;
-    if (i < LIGNES - 1 && p -> grille[i + 1][j] == TENTE) return 0;
-    if (i < LIGNES - 1 && j < COLONNES - 1 && p -> grille[i + 1][j + 1] == TENTE) return 0;
-
-    return 1;   
-}
-
-/* Fonction qui vérifie si une tente peut être placée en (i, j) */
+    Retourne :
+        - 0 : Si les conditions sont respectées
+        - 1 : Si les conditions ne sont pas respectées
+    
+*/
 int peut_placer_tente(Plateau *p, int i, int j) {
     // Vérifier que la case donnée est VIDE
     if (p -> grille[i][j] != VIDE) return 0;
 
-    // Vérifier qu'il reste des tentes à placer sur la ligne et la colonne
+    // Vérifier qu'il reste des tentes à placer sur la colonne
     if (p -> tentesParColonne[i] <= 0 || p -> tentesParLigne[j] <= 0) return 0;
 
     // Vérification de présence d'une tente adjacente à la case (i, j)
@@ -223,16 +263,22 @@ int peut_placer_tente(Plateau *p, int i, int j) {
     return 1;
 }
 
-void placer_tente(Plateau *p, int i, int j) {
-    if (i < 0 || i >= LIGNES || j < 0 || j >= COLONNES) return;
+/*
+    Place une TENTE sur la case (i, j) du Plateau
+    La case (i, j) doit être :
+        - Entre valide (i entre 0 et #LIGNES, j entre 0 et #COLONNES)
 
+    Si une case adjacente (horizontale, verticale, diagonale) est VIDE, place de l'HERBE sur celle-ci
+*/
+void placer_tente(Plateau *p, int i, int j) {
+    // Place une TENTE dans la case (i, j)
     p -> grille[i][j] = TENTE;
 
-    // On décrémente le nombre de tente requises sur une ligne/colonne
+    // On décrémente le nombre de tente requises sur la ligne/colonne
     p -> tentesParColonne[i]--;
     p -> tentesParLigne[j]--;
 
-    // Vérification de présence d'une tente adjacente à la case (i, j)
+    // Placement d'HERBE dans les cases adjacentes à la case (i, j)
     if (i > 0 && j > 0 && p -> grille[i - 1][j - 1] == VIDE) p -> grille[i - 1][j - 1] = HERBE;
     if (i > 0 && p -> grille[i - 1][j] == VIDE) p -> grille[i-1][j] = HERBE;
     if (i > 0 && j < COLONNES - 1 && p -> grille[i - 1][j + 1] == VIDE) p -> grille[i - 1][j + 1] = HERBE;
@@ -245,42 +291,38 @@ void placer_tente(Plateau *p, int i, int j) {
     return;
 }
 
-void enlever_tente(Plateau *p, int i, int j) {
-    if (i < 0 || i >= LIGNES || j < 0 || j >= COLONNES) return;
-
-    p -> grille[i][j] = VIDE;
-
-    // On décrémente le nombre de tente requises sur une ligne/colonne
-    p -> tentesParColonne[i]++;
-    p -> tentesParLigne[j]++;
-
-    // Vérification de présence d'une tente adjacente à la case (i, j)
-    if (i > 0 && j > 0 && p -> grille[i - 1][j - 1] == HERBE && peut_enlever_herbe(p, i - 1, j - 1))
-        p -> grille[i - 1][j - 1] = VIDE;
-    if (i > 0 && p -> grille[i - 1][j] == HERBE && peut_enlever_herbe(p, i - 1, j))
-        p -> grille[i - 1][j] = VIDE;
-    if (i > 0 && j < COLONNES - 1 && p -> grille[i - 1][j + 1] == HERBE && peut_enlever_herbe(p, i - 1, j + 1))
-        p -> grille[i - 1][j + 1] = VIDE;
-    if (j > 0 && p -> grille[i][j - 1] == HERBE && peut_enlever_herbe(p, i, j - 1))
-        p -> grille[i][j - 1] = VIDE;
-    if (j < COLONNES - 1 && p -> grille[i][j + 1] == HERBE && peut_enlever_herbe(p, i, j + 1))
-        p -> grille[i][j + 1] = VIDE;
-    if (i < LIGNES - 1 && j > 0 && p -> grille[i + 1][j - 1] == HERBE && peut_enlever_herbe(p, i + 1, j - 1))
-        p -> grille[i + 1][j - 1] = VIDE;
-    if (i < LIGNES - 1 && p -> grille[i + 1][j] == HERBE && peut_enlever_herbe(p, i + 1, j))
-        p -> grille[i + 1][j] = VIDE;
-    if (i < LIGNES - 1 && j < COLONNES - 1 && p -> grille[i + 1][j + 1] == HERBE && peut_enlever_herbe(p, i + 1, j + 1))
-        p -> grille[i + 1][j + 1] = VIDE;
-
-    return;
+/*
+    Vérifie si toutes les lignes et les colonnes du Plateau sont à 0. Cela valide la solution si c'est le cas.
+    Retourne :
+        - 1 : Si c'est le cas
+        - 0 : Si ce n'est pas le cas
+*/
+int verif_solution(Plateau *p) {
+    for (int i = 0; i < LIGNES; i++) if (p -> tentesParLigne[i] != 0) return 0;
+    for (int j = 0; j < COLONNES; j++) if (p -> tentesParColonne[j] != 0) return 0;
+    return 1;
 }
 
-int resolution (Plateau *p){
+/*
+    Applique une résolution logique au Plateau
+    - Si le nombre de TENTES requises sur une ligne/colonne est égal à 0, on met de l'HERBE tout le long de celle-ci
+    - Si le nombre de case VIDE est égal au nombre de TENTES restantes à placer sur une ligne/colonne, tentative de placer une tente
+    - Si un seul espace VIDE est disponible autour d'un ARBRE, tentative de placer une TENTE sur celui-ci
+
+    Tant qu'une modification est apportée au Plateau, on continue fait tourner la fonction
+    Retourne :
+        - 1 : Si la solution est trouvée
+        - 0 : Si la solution n'est pas trouvée
+*/
+int resolution_logique(Plateau *p){
     int modifications = 1;
     while (modifications){
         modifications = 0;
         for (int i = 0; i < LIGNES; i++) {
             int countVide = 0;
+
+            // Si aucune tente n'est requise sur une ligne, on met de l'HERBE tout le long de celle-ci
+            if (p -> tentesParLigne[i] == 0) for (int j = 0; j < COLONNES; j++) if (p -> grille[j][i] == VIDE) p -> grille[j][i] = HERBE;
             
             // Compter le nombre de VIDE sur la ligne
             for (int j = 0; j < COLONNES; j++) {
@@ -288,8 +330,9 @@ int resolution (Plateau *p){
                     countVide++;
                 }
             }
+
             // Si le nombre de VIDE est égal au nombre de tente à placer sur la LIGNE
-            if (countVide == p -> tentesParLigne[i] || p -> tentesParLigne[i] == 0) {
+            if (countVide == p -> tentesParLigne[i]) {
                 for (int j = 0; j < COLONNES; j++) {
                     if (peut_placer_tente(p, j, i)) { 
                         placer_tente(p, j, i); // On place les tentes sur toutes les cases vides
@@ -302,6 +345,8 @@ int resolution (Plateau *p){
         // La même chose pour les colonnes
         for (int i = 0; i < COLONNES; i++) {
             int countVide = 0;
+
+            if (p -> tentesParColonne[i] == 0) for (int j = 0; j < LIGNES; j++) if (p -> grille[i][j] == VIDE) p -> grille[i][j] = HERBE;
             
             for (int j = 0; j < LIGNES; j++) {
                 if (p -> grille[i][j] == VIDE) {
@@ -309,7 +354,7 @@ int resolution (Plateau *p){
                 }
             }
             
-            if (countVide == p -> tentesParColonne[i] || p -> tentesParColonne[i] == 0) {
+            if (countVide == p -> tentesParColonne[i]) {
                 for (int j = 0; j < COLONNES; j++) {
                     if (peut_placer_tente(p, i, j)) {
                         placer_tente(p, i, j);
@@ -343,31 +388,58 @@ int resolution (Plateau *p){
         
     }
 
-    return 1;
+    if (verif_solution(p)) return 1;
+    return 0;
 }
 
-int verif_solution(Plateau *p) {
-    for (int i = 0; i < LIGNES; i++) if (p->tentesParLigne[i] != 0) return 0;
-    for (int j = 0; j < COLONNES; j++) if (p->tentesParColonne[j] != 0) return 0;
-    return 1;
-}
-
-int backtrack(Plateau *p) {
+/*
+    Parcours toutes les cases du Plateau. Si on peut placer une TENTE sur l'une d'elle, on sauvegarde le Plateau avant de le faire.
+    Ensuite, on fait resolution_logique() du nouveau Plateau.
+    Puis on rappelle recursivement la fonction backtrack() pour qu'elle puisse placer des nouvelles tentes.
+    Si on trouve une solution on retourne 1. Sinon, on restaure l'ancienne sauvegarde du Plateau.
+    Retourne :
+        - 1 : Si la solution est trouvée
+        - 0 : Si la solution n'est pas trouvée
+*/
+int backtrack(Plateau *p, bool slowMode) {
     // Si la solution est trouvée, on arrête
     if (verif_solution(p)) return 1;
+    if (slowMode){
+        clear_terminal();
+        afficher_plateau(p);
+        sleep(1);
+    }
 
     // Parcourir toutes les cases du plateau
     for (int i = 0; i < LIGNES; i++) {
         for (int j = 0; j < COLONNES; j++) {
             // Essayer de placer une tente
             if (peut_placer_tente(p, i, j)) {
+                Plateau *backup = copie_plateau(p);
                 placer_tente(p, i, j);
+                if (slowMode){
+                    clear_terminal();
+                    afficher_plateau(p);
+                    sleep(1);
+                }
+                resolution_logique(p);
+                if (slowMode){
+                    clear_terminal();
+                    afficher_plateau(p);
+                    sleep(1);
+                }
 
-                if (backtrack(p)) return 1;
+                if (backtrack(p, slowMode)) return 1;
 
                 // Annuler le placement si ça ne mène pas à une solution
-                enlever_tente(p, i, j);
+                restaurer_plateau(p, backup);
+                free_plateau(backup);
 
+                if (slowMode){
+                    clear_terminal();
+                    afficher_plateau(p);
+                    sleep(1);
+                }
             }
         }
     }
@@ -375,33 +447,7 @@ int backtrack(Plateau *p) {
     return 0;
 }
 
-int backtrack_brut(Plateau *p) {
-    if (verif_solution(p)) {
-        return 1;
-    }
-
-    // Parcourir toutes les cases du plateau
-    for (int i = 0; i < LIGNES; i++) {
-        for (int j = 0; j < COLONNES; j++) {
-            if (p->grille[i][j] == VIDE) {
-                p->grille[i][j] = TENTE;
-                p->tentesParLigne[i]--;
-                p->tentesParColonne[j]--;
-
-                // On essaie d'autres placements
-                if (backtrack(p)) return 1;
-
-                // Annuler le placement si ça ne mène pas à une solution
-                p->grille[i][j] = VIDE;
-                p->tentesParLigne[i]++;
-                p->tentesParColonne[j]++;
-            }
-        }
-    }
-
-    return 0;
-}
-
+/* Fonction permettant de jouer de façon interactive au jeu de Tentes, sans résolution */
 void jouer(Plateau *p) {
     int choix, x, y;
     clear_terminal();
@@ -450,7 +496,9 @@ void jouer(Plateau *p) {
                     printf("Tente placée en (%d, %d)\n", x, y);
                     sleep(2);
                     clear_terminal();
-                } else {
+                }
+                
+                else {
                     printf("Placement invalide. Case occupée ou coordonnées incorrectes.\n");
                     sleep(2);
                     clear_terminal();
@@ -479,7 +527,9 @@ void jouer(Plateau *p) {
                     printf("Tente enlevée en (%d, %d)\n", x, y);
                     sleep(2);
                     clear_terminal();
-                } else {
+                }
+                
+                else {
                     printf("Placement invalide. Case occupée ou coordonnées incorrectes.\n");
                     sleep(2);
                     clear_terminal();
@@ -506,7 +556,9 @@ void jouer(Plateau *p) {
                     printf("Herbe placée en (%d, %d)\n", x, y);
                     sleep(2);
                     clear_terminal();;
-                } else {
+                }
+                
+                else {
                     printf("Placement invalide. Case occupée ou coordonnées incorrectes.\n");
                     sleep(2);
                     clear_terminal();
@@ -533,7 +585,9 @@ void jouer(Plateau *p) {
                     printf("Herbe enlevée en (%d, %d)\n", x, y);
                     sleep(2);
                     clear_terminal();;
-                } else {
+                }
+                
+                else {
                     printf("Placement invalide. Case occupée ou coordonnées incorrectes.\n");
                     sleep(2);
                     clear_terminal();
@@ -546,7 +600,9 @@ void jouer(Plateau *p) {
                     printf("Félicitations, vous avez compléter le puzzle !\n");
                     sleep(2);
                     return;
-                } else {
+                }
+                
+                else {
                     printf("La solution n'est pas encore résolue.\n");
                     sleep(2);
                 }
@@ -560,7 +616,7 @@ void jouer(Plateau *p) {
 
             default:
                 clear_terminal();
-                printf("Choix invalide. Veuillez entrer 1, 2, 3 ou 4.\n");
+                printf("Choix invalide.\n");
                 sleep(2);
                 break;
         }
@@ -570,12 +626,11 @@ void jouer(Plateau *p) {
 }
 
 int main(void) {
-    clear_terminal();
     Plateau *p = creation_plateau();
     int choix;
 
     // Lecture du fichier pour récupérer les informations du Plateau
-    if (!lire_fichier("difficile0.pln", p)) {
+    if (!lire_fichier("intermediaire_8x8.pln", p)) {
         free_plateau(p);
         return 1;
     }
@@ -585,8 +640,7 @@ int main(void) {
     printf("1 : Jouer\n");
     printf("2 : Résoudre par logique\n");
     printf("3 : Résoudre par backtrack\n");
-    printf("4 : Résoudre par backtrack brut\n");
-    printf("5 : Quitter\n");
+    printf("4 : Quitter\n");
 
     printf("\nEntrez votre choix : ");
     scanf("%d", &choix);
@@ -594,45 +648,53 @@ int main(void) {
 
     switch (choix) {
         case 1:
-            // On remplit toutes les cases de vide
-            for (int i = 0; i < LIGNES; i++) {
-                for (int j = 0; j < COLONNES; j++) {
-                    if (p -> grille[i][j] != ARBRE) p -> grille[i][j] = VIDE;
-                }
-            }
             jouer(p);
             break;
 
         case 2:
-            remplir_vide_autour_arbre(p);
-            resolution(p)
+            resolution_logique(p)
             ? printf("Solution trouvée :\n\n")
             : printf("Aucune solution possible.\n\n");
             afficher_plateau(p);
             return 0;
 
         case 3:
-            remplir_vide_autour_arbre(p);
-            backtrack(p)
+            int choixModeInt;
+            bool choixMode;
+            clear_terminal();
+            printf("Voulez-vous faire le backtrack en mode lent ?\n");
+            printf("1 - Oui\n");
+            printf("2 - Non\n");
+            printf("\nEntrez votre choix : ");
+            scanf("%d", &choixModeInt);
+            switch (choixModeInt) {
+                case 1:
+                    choixMode = true;
+                    break;
+
+                case 2:
+                    choixMode = false;
+                    break;
+                
+                default:
+                    printf("Choix invalide. Veuillez entrer 1 ou 2\n\n");
+                    break;
+
+            }
+            clear_terminal();
+            backtrack(p, choixMode)
             ? printf("Solution trouvée :\n\n")
             : printf("Aucune solution possible.\n\n");
             afficher_plateau(p);
             return 0;
-        
+
         case 4:
-            backtrack_brut(p)
-            ? printf("Solution trouvée :\n\n")
-            : printf("Aucune solution possible.\n\n");
-            afficher_plateau(p);
-            return 0;
-        
-        case 5:
             printf("Vous avez quitté le programme.\n");
             free_plateau(p);
             return 0;
 
         default:
-            printf("Choix invalide. Veuillez entrer 1, 2, 3, 4 ou 5.\n\n");
+            printf("Choix invalide. Veuillez entrer 1, 2, 3 ou 4.\n\n");
             break;
     }
     
