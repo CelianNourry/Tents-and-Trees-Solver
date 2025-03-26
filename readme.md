@@ -1,11 +1,20 @@
-Ecrit par Nourry Celian le 18/12/24
+# Tent and Trees Solver
 
-Le rapport.pdf explique les fonctionnalités et le fonctionnement des fonctions.
+## Author
+Nourry Celian
 
-Execution :
-    make run
-Nettoyage : 
-    make clean
+## Description
+Tent and Trees puzzle solver using logic and backtracking. Boards to solve are encoded in .pln files. To change the board you want to use, you must specify it in the source code. There is no interface on the current version, only a representatio of the board on the terminal.
 
-Pour changer le puzzle lu, il est nécéssaire de modifier l'arguement de l'appel de fonction lire_fichier() dans le main de tentes.c avec le fichier de votre choix.
-Les dimensions du puzzle sont aussi à spécifier dans tentes.h (LIGNES et COLONNES)
+## Modes
+1. Play (Play a normal game of Tent and Trees.
+2. Solve using logic (Solve without backtrack)
+3. Solve using backtrack (Solve using logic and backtrack
+    - Fast mode (Instantly solves)
+    - Slow mode (1 second delay between each action of the program)
+
+## Execution
+- make run
+
+## Cleaning
+- make clean
