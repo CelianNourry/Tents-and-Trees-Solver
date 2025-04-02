@@ -1,0 +1,517 @@
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\graphicspath{ {./images/} }
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+
+\definecolor{mGreen}{rgb}{0,0.6,0}
+\definecolor{mGray}{rgb}{0.5,0.5,0.5}
+\definecolor{mPurple}{rgb}{0.58,0,0.82}
+\definecolor{backgroundColour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{CStyle}{
+    backgroundcolor=\color{backgroundColour},   
+    commentstyle=\color{mGreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{mGray},
+    stringstyle=\color{mPurple},
+    basicstyle=\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2,
+    language=C
+}
+
+\title{Rapport de Projet de Résolution du jeu de Tentes}
+\author{Nourry Celian & Numéro Étudiant : 22002895}
+\date{Date de rendu : le 19/12/2024}
+
+\begin{document}
+
+\maketitle
+\section*{Introduction}
+\textbf{Description du jeu des tentes}
+
+Le jeu des tentes est un casse-tête logique qui se joue sur une grille rectangulaire ou carrée. Chaque case de la grille peut être occupée par un arbre, une tente ou rester vide. Le but du jeu est de placer les tentes sur la grille en respectant un ensemble de règles précises.
+
+\textbf{Règles du jeu}
+
+\begin{enumerate}
+    \item \textbf{Association des tentes et des arbres :}
+    \begin{itemize}
+        \item Chaque tente doit être associée à un arbre adjacent (horizontalement ou verticalement, mais pas en diagonale).
+        \item Un arbre ne peut être associé qu’à une seule tente.
+    \end{itemize}
+    \item \textbf{Disposition des tentes :}
+        Les tentes ne doivent pas être placées côte à côte, ni horizontalement, ni verticalement, ni en diagonale.
+
+    \item \textbf{Contraintes par ligne et par colonne :}
+Le nombre de tentes dans chaque ligne et chaque colonne est spécifié au début du jeu. Ces contraintes doivent être strictement respectées.
+
+    \item \textbf{Cases interdites :}
+Certaines cases peuvent être marquées comme inaccessibles (herbe), ce qui signifie qu’il est impossible d’y placer une tente.
+
+\end{enumerate}
+
+\textbf{Objectif du jeu}
+
+Le joueur doit placer toutes les tentes sur la grille de manière à satisfaire toutes les contraintes :
+
+\begin{itemize}
+    \item Chaque tente doit être associée à un arbre.
+    \item Les tentes ne doivent pas se toucher.
+    \item Le nombre de tentes par ligne et par colonne doit correspondre aux indications données.
+\end{itemize}
+
+\textbf{Objectif du projet}
+
+L'objectif principal de ce projet est de développer un programme capable de résoudre automatiquement les grilles du jeu des tentes. Pour ce faire, plusieurs objectifs spécifiques ont été définis :
+
+\begin{enumerate}
+    \item \textbf{Résoudre automatiquement des grilles de jeu :}
+    Le programme doit être capable de prendre une grille de jeu initiale, qui peut inclure des arbres, des cases vides et des espaces interdits (herbe, et d'en déduire une solution valide, c’est-à-dire une disposition correcte des tentes. L’objectif est d’automatiser le processus de résolution en utilisant des méthodes logiques et des techniques de recherche (notamment en exhaustive)
+
+    \item \textbf{Garantir la validité des solutions proposées :}
+    Chaque solution générée par le programme doit respecter strictement les règles du jeu. Cela signifie que le programme doit vérifier plusieurs critères de validité :
+
+    \begin{itemize}
+    \item Chaque tente doit être associée à un arbre et ne doit pas être placée côte à côte avec une autre tente.
+    \item Les contraintes sur le nombre de tentes par ligne et par colonne doivent être respectées.
+    \item Les espaces interdits (herbe) doivent être correctement évités.
+    \end{itemize}
+    
+    En outre, des tests doivent être effectués pour s'assurer que le programme ne produit que des solutions valides, et qu'aucune condition du jeu n'est enfreinte.
+\end{enumerate}
+
+\section*{Conception}
+
+\textbf{Structure de données du plateau}
+
+    Le plateau se compose de 5 éléments :
+    \begin{itemize}
+    \item Un tableau 2D contenant des entiers pour représenter la grille du plateau
+    \item Un tableau contenant le nombre de tentes que peut accueillir chaque ligne actuellement
+    \item Un tableau contenant le nombre de tentes que peut accueillir chaque colonne actuellement
+    \item Un tableau contenant le nombre de tentes que peut accueillir chaque ligne originalement
+    \item Un tableau contenant le nombre de tentes que peut accueillir chaque colonne originalement
+    \end{itemize}
+\begin{lstlisting}[style=Cstyle]
+typedef struct {
+    int **grille;
+    int *tentesParLigne;
+    int *tentesParColonne;
+
+    int *tentesParLigneOriginal;
+    int *tentesParColonneOriginal;
+} Plateau;
+\end{lstlisting}
+    Les variables tentesParLigne et tentesParColonne sont utilisées par le programme durant la résolution pour traquer le nombre de tentes qu'il peut encore mettre sur une ligne ou une colonne. Tandis que pour tentesParLigneOriginal et tentesParColonneOriginal, elles sont utilisées pour l'affichage des valeurs originales.
+
+\textbf{Variables mises dans la grille du plateau}
+    Les variables mises dans la grille du plateau sont des entiers signés sous cette forme :
+    \begin{itemize}
+    \item "-1" pour de l'herbe
+    \item "0" pour du vide
+    \item "1" pour une tente
+    \item "2" pour un arbre
+    \end{itemize}
+    La taille de chaque LIGNE et COLONNE du plateau est spécifiée au préalable dans "LIGNES" et "COLONNES". Ces valeurs doivent être modifiées si l'on veut utiliser d'autres dimensions pour notre plateau.
+
+\begin{lstlisting}[style=Cstyle]
+#define HERBE -1
+#define VIDE 0
+#define TENTE 1
+#define ARBRE 2
+
+#define LIGNES 8
+#define COLONNES 8
+\end{lstlisting}
+
+\textbf{Création du plateau}
+
+    La fonction de création de plateau ne prend rien en paramètre et retourne une structure de données de Plateau. Elle va dans un premier temps allouer de la mémoire pour chaque LIGNE de celui-ci, puis sur chacune de ces LIGNES, elle va allouer de la mémoire pour chaque COLONNE. Elle va faire de même pour les tableaux du nombre de tentes restantes à placer sur chaque ligne et chaque colonne. Enfin, elle va initialiser toutes les valeurs de la grille à 0 pour représenter du VIDE.
+\begin{lstlisting}[style=Cstyle]
+Plateau *creation_plateau(void) {
+    Plateau *p = malloc(sizeof(Plateau));
+    if (p == NULL) return NULL;
+
+    // Allocation pour la grille
+    p -> grille = malloc(LIGNES * sizeof(int *));
+    if (p -> grille == NULL) {
+        free(p);
+        return NULL;
+    }
+    for (int i = 0; i < LIGNES; i++) {
+        p -> grille[i] = malloc(COLONNES * sizeof(int));
+        if (p -> grille[i] == NULL) {
+            for (int j = 0; j < i; j++) free(p -> grille[j]);
+            free(p -> grille);
+            free(p);
+            return NULL;
+        }
+    }
+
+    // Allocation des tentes requise sur chaque cases
+    p -> tentesParLigne = malloc(LIGNES * sizeof(int));
+    p -> tentesParColonne = malloc(COLONNES * sizeof(int));
+    if (p -> tentesParLigne == NULL || p -> tentesParColonne == NULL) {
+        free(p -> grille);
+        free(p);
+        return NULL;
+    }
+
+    p -> tentesParLigneOriginal = malloc(LIGNES * sizeof(int));
+    p -> tentesParColonneOriginal = malloc(COLONNES * sizeof(int));
+    if (p -> tentesParLigneOriginal == NULL || p -> tentesParColonneOriginal == NULL) {
+        free(p -> grille);
+        free(p -> tentesParLigne);
+        free(p -> tentesParColonne);
+        free(p);
+        return NULL;
+    }
+
+    // Initialisation du Plateau avec du VIDE sur chaque case
+    for (int i = 0; i < LIGNES; i++) for (int j = 0; j < COLONNES; j++) p -> grille[i][j] = VIDE;
+
+    return p;
+}
+\end{lstlisting}
+
+\textbf{Libération de mémoire du plateau}
+
+La fonction de libération d'un plateau prend un plateau en paramètre et ne renvoie rien. Elle libère chacun des éléments mis dans celui-ci.
+
+\begin{lstlisting}[style=Cstyle]
+void free_plateau(Plateau *p) {
+    if (p == NULL) return;
+
+    for (int i = 0; i < LIGNES; i++) free(p -> grille[i]);
+    free(p -> grille);
+    free(p -> tentesParLigne);
+    free(p -> tentesParColonne);
+    free(p -> tentesParLigneOriginal);
+    free(p -> tentesParColonneOriginal);
+
+    free(p);
+}
+\end{lstlisting}
+
+\textbf{Copie d'un plateau existant}
+
+La fonction de copie d'un plateau prend en paramètre un plateau et renvoie un plateau. Elle fait l'exacte copie du plateau mis en paramètre pour le renvoyer. Pour faire cela, elle initialise un plateau avec la fonction de création de plateau, puis chaque élément du plateau mis en paramètre est copié dans le nouveau plateau renvoyé. Cette fonction est utile pour faire des sauvegardes d'états précédents de plateau durant l'algorithme de backtracking.
+\begin{lstlisting}[style=Cstyle]
+Plateau *copie_plateau(const Plateau *p) {
+    if (p == NULL) return NULL;
+
+    Plateau *copie = creation_plateau();
+    if (copie == NULL) return NULL;
+
+    for (int i = 0; i < LIGNES; i++) {
+        for (int j = 0; j < COLONNES; j++) {
+            copie -> grille[i][j] = p -> grille[i][j];
+        }
+    }
+
+    for (int i = 0; i < LIGNES; i++) {
+        copie -> tentesParLigne[i] = p -> tentesParLigne[i];
+        copie -> tentesParLigneOriginal[i] = p -> tentesParLigneOriginal[i];
+    }
+
+    for (int j = 0; j < COLONNES; j++) {
+        copie -> tentesParColonne[j] = p -> tentesParColonne[j];
+        copie -> tentesParColonneOriginal[j] = p -> tentesParColonneOriginal[j];
+    }
+
+    return copie;
+}
+\end{lstlisting}
+
+\textbf{Restauration d'un plateau}
+
+La fonction de restauration d'un plateau prend en paramètre deux plateaux et renvoie un plateau. Elle copie les données du plateau source dans le plateau destination. Cela est utilisé pour restaurer l'état précédent d'un plateau si l'algorithme de backtracking mène à une mauvaise solution.
+
+\begin{lstlisting}[style=Cstyle]
+void restaurer_plateau(Plateau *dest, const Plateau *src) {
+    for (int i = 0; i < LIGNES; i++) {
+        for (int j = 0; j < COLONNES; j++) {
+            dest -> grille[i][j] = src -> grille[i][j];
+        }
+    }
+
+    for (int i = 0; i < LIGNES; i++) {
+        dest -> tentesParLigne[i] = src->tentesParLigne[i];
+        dest -> tentesParLigneOriginal[i] = src -> tentesParLigneOriginal[i];
+    }
+
+    for (int j = 0; j < COLONNES; j++) {
+        dest -> tentesParColonne[j] = src -> tentesParColonne[j];
+        dest -> tentesParColonneOriginal[j] = src -> tentesParColonneOriginal[j];
+    }
+}
+\end{lstlisting}
+
+\textbf{Vérification de placement de tente}
+
+    La fonction de vérification de placement de tente prend en paramètre un plateau et deux entiers signés. Ces deux entiers sont une représentation de coordonnées dans la grille du plateau. Elle retourne un entier signé. Cette fonction est indispensable pour vérifier si le placement d'une TENTE placée par un algorithme de résolution automatique est cohérent.
+    Une TENTE peut être placée dans les coordonnées (i, j) de la grille du plateau quand la case :
+    \begin{itemize}
+    \item est VIDE
+    \item a encore de la place pour accueillir une nouvelle TENTE
+    \item n'a pas de case adjacente étant une TENTE (horizontale, verticale et diagonale)
+    \item a une case adjacente étant un ARBRE (horizontale, verticale)
+    \end{itemize}
+    La fonction retourne 1 si les conditions énumérées ci-dessus sont respectées, sinon elle renvoie 0.
+
+
+\begin{lstlisting}[style=Cstyle]
+int peut_placer_tente(Plateau *p, int i, int j) {
+    // Vérifier que la case donnée est VIDE
+    if (p -> grille[i][j] != VIDE) return 0;
+
+    // Vérifier qu'il reste des tentes à placer sur la colonne
+    if (p -> tentesParColonne[i] <= 0 || p -> tentesParLigne[j] <= 0) return 0;
+
+    // Vérification de présence d'une tente adjacente à la case (i, j)
+    if (i > 0 && j > 0 && p -> grille[i - 1][j - 1] == TENTE) return 0;
+    if (i > 0 && p -> grille[i - 1][j] == TENTE) return 0;
+    if (i > 0 && j < COLONNES - 1 && p -> grille[i - 1][j + 1] == TENTE) return 0;
+    if (j > 0 && p -> grille[i][j - 1] == TENTE) return 0;
+    if (j < COLONNES - 1 && p -> grille[i][j + 1] == TENTE) return 0;
+    if (i < LIGNES - 1 && j > 0 && p->grille[i + 1][j - 1] == TENTE) return 0;
+    if (i < LIGNES - 1 && p -> grille[i + 1][j] == TENTE) return 0;
+    if (i < LIGNES - 1 && j < COLONNES - 1 && p -> grille[i + 1][j + 1] == TENTE) return 0;
+
+    // Vérification de la présence d'un ARBRE autour de la case (i, j). S'il n'y en a pas, on ne place pas la tente
+    if ((i == 0 || p -> grille[i - 1][j] != ARBRE) &&
+        (i == LIGNES - 1 || p -> grille[i + 1][j] != ARBRE) &&
+        (j == 0 || p -> grille[i][j - 1] != ARBRE) &&
+        (j == COLONNES - 1 || p -> grille[i][j + 1] != ARBRE))
+    return 0;
+
+    return 1;
+}
+\end{lstlisting}
+
+\textbf{Placement de tente}
+    La fonction de placement de tente prend également un plateau et deux entiers signés qui représentent les coordonnées dans une grille du plateau. Elle ne renvoie rien et ne fait pas de vérification poussée car elles sont déjà faites dans la fonction de vérification de placement de TENTE. Elle vérifie seulement si les deux entiers signés mis en paramètre ne sont pas en dehors des limites du plateau. Elle décrémente le nombre de TENTES requises sur la LIGNE et la COLONNE, puisqu'on vient d'en placer une. Elle met aussi de l'HERBE autour de la TENTE placée puisque aucune autre TENTE n'est supposée toucher la TENTE placée.
+
+\begin{lstlisting}[style=Cstyle]
+void placer_tente(Plateau *p, int i, int j) {
+    // Place une TENTE dans la case (i, j)
+    p -> grille[i][j] = TENTE;
+
+    // On décrémente le nombre de tente requises sur la ligne/colonne
+    p -> tentesParColonne[i]--;
+    p -> tentesParLigne[j]--;
+
+    // Placement d'HERBE dans les cases adjacentes à la case (i, j)
+    if (i > 0 && j > 0 && p -> grille[i - 1][j - 1] == VIDE) p -> grille[i - 1][j - 1] = HERBE;
+    if (i > 0 && p -> grille[i - 1][j] == VIDE) p -> grille[i-1][j] = HERBE;
+    if (i > 0 && j < COLONNES - 1 && p -> grille[i - 1][j + 1] == VIDE) p -> grille[i - 1][j + 1] = HERBE;
+    if (j > 0 && p -> grille[i][j - 1] == VIDE) p -> grille[i][j - 1] = HERBE;
+    if (j < COLONNES - 1 && p -> grille[i][j + 1] == VIDE) p -> grille[i][j + 1] = HERBE;
+    if (i < LIGNES - 1 && j > 0 && p -> grille[i + 1][j - 1] == VIDE) p -> grille[i + 1][j - 1] = HERBE;
+    if (i < LIGNES - 1 && p -> grille[i + 1][j] == VIDE) p -> grille[i + 1][j] = HERBE;
+    if (i < LIGNES - 1 && j < COLONNES - 1 && p -> grille[i + 1][j + 1] == VIDE) p -> grille[i + 1][j + 1] = HERBE;
+
+    return;
+}
+\end{lstlisting}
+
+\textbf{Vérification de la validité d'un plateau}
+
+    La fonction de vérification de la validité d'un plateau prend en paramètre et renvoie un entier signé. Elle vérifie si l'aménagement du plateau est la solution du puzzle. Pour le faire simplement, elle vérifie si toutes les lignes et les colonnes ont exactement le bon nombre de TENTES placées sur celles-ci.
+    
+\begin{lstlisting}[style=Cstyle]
+int verif_solution(Plateau *p) {
+    for (int i = 0; i < LIGNES; i++) if (p -> tentesParLigne[i] != 0) return 0;
+    for (int j = 0; j < COLONNES; j++) if (p -> tentesParColonne[j] != 0) return 0;
+    return 1;
+}
+\end{lstlisting}
+
+\textbf{Résolution logique}
+
+    La fonction de résolution logique prend en paramètre un plateau et renvoie un entier signé. Elle fonctionne sur une boucle qui continue tant qu'une modification du plateau est faite par cette même fonction. Les modifications du plateau sont faites quand : 
+    \begin{itemize}
+    \item le nombre de TENTES requises sur une ligne ou une colonne est égal à 0 (on met de l'HERBE tout le long de celle-ci)
+    \item le nombre de case VIDE sur le long d'une ligne ou une colonne est égal au nombre de TENTES restantes à placer sur celle-ci (on place donc une TENTE sur toutes les cases VIDES le long de la LIGNE/COLONNE)
+    \item un seul espace VIDE est disponible autour d'un ARBRE (on place donc une TENTE sur celui-ci)
+    \end{itemize}
+    La fonction retourne 1 si la solution est valide, sinon 0.
+    Elle sert à aider la fonction de backtracking pour rapidement supprimer des arbres de parcours en utilisant les contraintes du jeu.
+
+\begin{lstlisting}[style=Cstyle]
+int resolution_logique(Plateau *p){
+    int modifications = 1;
+    while (modifications){
+        modifications = 0;
+        for (int i = 0; i < LIGNES; i++) {
+            int countVide = 0;
+
+            // Si aucune tente n'est requise sur une ligne, on met de l'HERBE tout le long de celle-ci
+            if (p -> tentesParLigne[i] == 0) for (int j = 0; j < COLONNES; j++) if (p -> grille[j][i] == VIDE) p -> grille[j][i] = HERBE;
+            
+            // Compter le nombre de VIDE sur la ligne
+            for (int j = 0; j < COLONNES; j++) {
+                if (p -> grille[j][i] == VIDE) {
+                    countVide++;
+                }
+            }
+
+            // Si le nombre de VIDE est egal au nombre de tente à placer sur la LIGNE
+            if (countVide == p -> tentesParLigne[i]) {
+                for (int j = 0; j < COLONNES; j++) {
+                    if (peut_placer_tente(p, j, i)) { 
+                        placer_tente(p, j, i); // On place les tentes sur toutes les cases vides
+                        modifications = 1;
+                    }
+                }
+            }
+        }
+
+        // La meme chose pour les colonnes
+        for (int i = 0; i < COLONNES; i++) {
+            int countVide = 0;
+
+            if (p -> tentesParColonne[i] == 0) for (int j = 0; j < LIGNES; j++) if (p -> grille[i][j] == VIDE) p -> grille[i][j] = HERBE;
+            
+            for (int j = 0; j < LIGNES; j++) {
+                if (p -> grille[i][j] == VIDE) {
+                    countVide++;
+                }
+            }
+            
+            if (countVide == p -> tentesParColonne[i]) {
+                for (int j = 0; j < COLONNES; j++) {
+                    if (peut_placer_tente(p, i, j)) {
+                        placer_tente(p, i, j);
+                        modifications = 1;
+                    }
+                }
+            }
+        }
+        
+        // S'il y a seulement un espace vide autour d'un ARBRE, on y place une TENTE
+        for (int i = 0; i < LIGNES; i++){
+            for (int j = 0; j < COLONNES; j++){
+                if (p -> grille[i][j] == ARBRE){
+                    int espaces_vides = 0;
+                    int direction_i = -1, direction_j = -1;
+
+                    if (i > 0 && p -> grille[i - 1][j] == VIDE) { espaces_vides++; direction_i = i - 1; direction_j = j;}
+                    if (i < LIGNES - 1 && p -> grille[i + 1][j] == VIDE) { espaces_vides++; direction_i = i + 1; direction_j = j;}
+                    if (j > 0 && p -> grille[i][j - 1] == VIDE) { espaces_vides++; direction_i = i; direction_j = j - 1;}
+                    if (j < COLONNES - 1 && p -> grille[i][j + 1] == VIDE) { espaces_vides++; direction_i = i; direction_j = j + 1;}
+                    
+                    if (espaces_vides == 1) {
+                        if (peut_placer_tente(p, direction_i, direction_j)) {
+                            placer_tente(p, direction_i, direction_j);
+                            modifications = 1;
+                        }
+                    }
+                }
+            }
+        }
+        
+    }
+
+    if (verif_solution(p)) return 1;
+    return 0;
+}
+\end{lstlisting}
+
+\textbf{Résolution par backtracking}
+
+    La fonction de backtracking est la plus important pour résoudre les puzzles. Elle prend en paramètre un plateau et un booléen. Elle renvoie un entier signé. Premièrement, la fonction va vérifier si le plateau est une solution valide. Elle retourne 1 si c'est le cas. Ensuite, elle fait une sauvegarde du plateau actuel au cas ou la solution recherchée par le backtracking serait non valide. Puis, elle vérifie pour l'intégralité des cases du plateau si on peut y placer une TENTE. Si oui, elle l'a place puis fait une résolution logique  du nouveau plateau pour écarter les contraintes logiques du jeu. Puis on rappelle la fonction de backtrack récursivement pour pourvoir continuer à placer des TENTES. Si à la fin du parcours d'un arbre de possibilité on tombe sur une solution non juste, on retourne 0 et on restaure le plateau précédent avec l'ancienne sauvegarde. Enfin, si booléen est à true, la fonction permet de voir tous les états différents du backtracking avec des pauses de 1 seconde après chaque modification de celle-ci.
+
+\begin{lstlisting}[style=Cstyle]
+int backtrack(Plateau *p, bool slowMode) {
+    // Si la solution est trouvee, on arrete
+    if (verif_solution(p)) return 1;
+    if (slowMode){
+        clear_terminal();
+        afficher_plateau(p);
+        sleep(1);
+    }
+
+    // Parcourir toutes les cases du plateau
+    for (int i = 0; i < LIGNES; i++) {
+        for (int j = 0; j < COLONNES; j++) {
+            // Essayer de placer une tente
+            if (peut_placer_tente(p, i, j)) {
+                Plateau *backup = copie_plateau(p);
+                placer_tente(p, i, j);
+                if (slowMode){
+                    clear_terminal();
+                    afficher_plateau(p);
+                    sleep(1);
+                }
+                resolution_logique(p);
+                if (slowMode){
+                    clear_terminal();
+                    afficher_plateau(p);
+                    sleep(1);
+                }
+
+                if (backtrack(p, slowMode)) return 1;
+
+                // Annuler le placement si ça ne mene pas à une solution
+                restaurer_plateau(p, backup);
+                free_plateau(backup);
+
+                if (slowMode){
+                    clear_terminal();
+                    afficher_plateau(p);
+                    sleep(1);
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+\textbf{Fonction de lecture d'un fichier de jeu de Tentes}
+
+    La fonction de lecture d'un fichier de Tentes prend une chaîne de caractère constante et un plateau. Elle renvoie 1 si aucune erreur ne s'est produite, -1 sinon.
+    Elle lit un fichier pour en extraire les informations nécessaires d'un jeu de Tentes.
+    Format d'un fichier valide :
+    \begin{itemize}
+    \item doit commencer par "debutPlan"
+    \item si "lignes" est lu :
+        lit les tentes nécéssaires sur chaque ligne du jeu. Le séparateur pour chaque nouvelle ligne est ";"
+    \item si "colonnes" est lu :
+        lit les tentes nécéssaires sur chaque colonne du jeu. Le séparateur pour chaque nouvelle colonne est ";"
+    \item si "arbres" est lu :
+        lit les coordonées (x, y) de chaque arbre. Le séparateur entre chaque coordonéee x et y est ";"
+    \item doit terminer par "finPlan"
+    \end{itemize}
+\textbf{Fonction jouer}
+
+La fonction jouer sert aux utilisateurs à jouer au jeu de Tentes sans aucune résolution automatique.
+
+\textbf{Fonction main}
+
+La fonction principale (main) initialise un plateau, puis lit un fichier pour remplir celui-ci. Elle donne la possibilité de jouer, résoudre par logique et résoudre par backtrack. Elle libère le plateau ensuite.
+
+\section*{Tests}
+
+Les résultats des tests effectués montrent que la résolution en backtrack et relativement rapide sur des grilles de 8x8. Cependant, certaines grilles sont plus rapidement résolues avec une simple utilisation de l'algorithme de résolution logique. Les grilles en 20x20 restent insolvable avec l'algorithme de backtracking actuel, car prenant trop de temps.
+
+\section*{Améliorations}
+
+Une des améliorations possibles serait l'utilisation d'heurestique qui priorise le remplissage de Tente dans les cases où le nombre de tente requise sur une ligne et une colonne est petit.
+
+\end{document}
